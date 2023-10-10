@@ -42,7 +42,7 @@ class Block(pygame.sprite.Sprite):
         #Lưu trữ tọa độ (x,y)
         self.coordinate = coordinate 
         self.size = size
-        self.border_size = border_size
+        self.border_size = border_size # Từ viền tới mê cung
         #Đại diện cho các hướng có tường    
         self.has_walls = [True, True, True, True]  # [top, bottom, left, right]
         self.is_visited = False
@@ -205,10 +205,20 @@ class MenuScreen:
         self.background = pygame.image.load('Image/bgr.png')
         self.background = pygame.transform.scale(self.background, (screen_width, screen_height))
         self.active = True
+        self.show_press_enter_text = True  # Biến kiểm soát trạng thái hiển thị
+
 
     def draw(self):
         if self.active:
             self.screen.blit(self.background, (0, 0))
+            
+            if self.show_press_enter_text:
+                text_font = pygame.font.SysFont('Consolas', 23)
+                text_surface = text_font.render('Press Enter to Play', True, (255, 255, 255))
+                text_rect = text_surface.get_rect()
+                text_rect.center = (self.screen.get_width() // 2, self.screen.get_height() - 50)
+                self.screen.blit(text_surface, text_rect)
+                
             pygame.display.flip()
 
     def handle_events(self):
@@ -219,10 +229,11 @@ class MenuScreen:
                 elif event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     sys.exit()
-            elif event.type == pygame.QUIT:  # Xử lý sự kiện đóng cửa sổ
+            elif event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
         return None
+
 
 #
 
@@ -238,14 +249,18 @@ class WaitScreen:
     def draw(self):
         if self.active:
             self.screen.blit(self.background, (0, 0))
-            # Hiển thị nút lựa chọn
-            continue_text = "Press J to Continue" if self.selected_option == 0 else "Press J to Continue"
+            # Hiển thị nút lựa chọn ở góc dưới cùng bên trái
+            continue_text = "Press J to Continue" if self.selected_option == 0 else "Press K to Menu"
             stop_text = "Press K to Menu" if self.selected_option == 1 else "Press K to Menu"
-            #showText(self.screen, self.font, continue_text, (255, 0, 0), (100, 200))
-            #showText(self.screen, self.font, stop_text, (255, 0, 0), (100, 250))
+            # Đặt màu chữ màu trắng
+            red = (255, 0, 0)
+            # Đặt tọa độ để tránh tràn ra khỏi màn hình
+            continue_text_position = (20, self.screen.get_height() - 60)
+            stop_text_position = (20, self.screen.get_height() - 30)
+            showText(self.screen, self.font, continue_text, red, continue_text_position)
+            showText(self.screen, self.font, stop_text, red, stop_text_position)
             pygame.display.flip()
 
-    
     def handle_events(self):
         if self.active:
             for event in pygame.event.get():
@@ -255,9 +270,6 @@ class WaitScreen:
                     elif event.key == pygame.K_k:
                         return "stop"  # Trả về "stop" khi ấn "K"
         return None
-
-
-
 
 
 # Lớp chính để chạy trò chơi
@@ -294,6 +306,9 @@ class MazeGame():
 
         # Tạo màn hình game một lần duy nhất
         screen = pygame.display.set_mode(self.cfg.SCREENSIZE)
+        # Cài đặt thời gian nhấp nháy cho dòng chữ
+        blink_speed = 0.5  # Số giây cho mỗi lần nhấp nháy
+        blink_timer = 0
 
         while num_levels < 3:
             if game_state == "menu":
@@ -369,8 +384,18 @@ class MazeGame():
                     if best_scores > num_steps:
                         best_scores = num_steps
                 num_steps = 0
+            elif game_state == "menu":
+                self.wait_screen.active = False  # Tắt màn hình chờ khi ở trạng thái menu
+                menu.draw()
+                pygame.display.flip()
 
+                # Cài đặt thời gian nhấp nháy cho dòng chữ "Press Enter to Play"
+                blink_timer += dt / 1000.0
+                if blink_timer >= blink_speed:
+                    menu.show_press_enter_text = not menu.show_press_enter_text
+                    blink_timer = 0
 
+            
 class ResourceLoader():
     def __init__(self):
         self.images = {}
